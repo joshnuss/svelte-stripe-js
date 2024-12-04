@@ -1,53 +1,74 @@
-<script>
-  import { onMount, getContext, createEventDispatcher } from 'svelte'
-  import { mount } from './util'
+<script lang="ts">
+  import type {
+    StripeElementClasses,
+    StripeElementStyle,
+    StripeCardElementOptions,
+    StripeCardExpiryElement,
+    StripeCardExpiryElementChangeEvent,
+    StripeError
+  } from '@stripe/stripe-js'
+  import type { ElementsContext } from './d.ts'
+  import { getContext } from 'svelte'
 
-  /** @type {import('@stripe/stripe-js').StripeElementClasses} */
-  export let classes = {}
+  interface Props {
+    classes?: StripeElementClasses
+    style?: StripeElementStyle
+    placeholder?: string
+    disabled?: boolean
+    element?: StripeCardExpiryElement
+    onchange?: (event: StripeCardExpiryElementChangeEvent) => any
+    onready?: (event: { elementType: 'cardExpiry' }) => any
+    onfocus?: (event: { elementType: 'cardExpiry' }) => any
+    onblur?: (event: { elementType: 'cardExpiry' }) => any
+    onescape?: (event: { elementType: 'cardExpiry' }) => any
+  }
 
-  /** @type {import('@stripe/stripe-js').StripeElementStyle} */
-  export let style = {}
+  let {
+    classes = {},
+    style = {},
+    placeholder = 'MM / YY',
+    disabled = false,
+    element = $bindable(),
+    onchange = () => {},
+    onready = () => {},
+    onfocus = () => {},
+    onblur = () => {},
+    onescape = () => {}
+  }: Props = $props()
 
-  /** @type {string} */
-  export let placeholder = 'MM / YY'
+  let wrapper = $state<HTMLElement>()
 
-  /** @type {boolean?} */
-  export let disabled = false
+  const { elements }: ElementsContext = getContext('stripe')
 
-  /** @type {import('@stripe/stripe-js').StripeElementBase?} */
-  export let element = null
-
-  /** @type {HTMLElement?} */
-  let wrapper
-
-  const dispatch = createEventDispatcher()
-
-  /** @type {import("./types").ElementsContext} */
-  const { elements } = getContext('stripe')
-
-  onMount(() => {
+  $effect(() => {
     const options = { classes, style, placeholder, disabled }
 
-    element = mount(wrapper, 'cardExpiry', elements, dispatch, options)
+    element = elements.create('cardExpiry', options)
 
-    return () => element.destroy()
+    element.on('change', onchange)
+    element.on('ready', onready)
+    element.on('focus', onfocus)
+    element.on('blur', onblur)
+    element.on('escape', onescape)
+
+    return () => element?.destroy()
   })
 
   export function blur() {
-    element.blur()
+    element?.blur()
   }
 
   export function clear() {
-    element.clear()
+    element?.clear()
   }
 
   export function destroy() {
-    element.destroy()
+    element?.destroy()
   }
 
   export function focus() {
-    element.focus()
+    element?.focus()
   }
 </script>
 
-<div bind:this={wrapper} />
+<div bind:this={wrapper}></div>

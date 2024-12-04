@@ -1,16 +1,17 @@
-<script>
+<script lang="ts">
   import { goto } from '$app/navigation'
   import { onMount } from 'svelte'
   import { loadStripe } from '@stripe/stripe-js'
   import { PUBLIC_STRIPE_KEY } from '$env/static/public'
-  import { Elements, Ideal } from '$lib'
+  import { Elements, Ideal } from '$lib/index.js'
+  import type { Stripe, StripeIdealBankElement as Element } from '@stripe/stripe-js'
 
-  let stripe = null
-  let error = null
-  let idealElement
-  let processing = false
-  let name
-  let email
+  let stripe = $state<Stripe | null>()
+  let error = $state<string | null>()
+  let idealElement = $state<Element>()
+  let processing = $state(false)
+  let name = $state<string>()
+  let email = $state<string>()
 
   onMount(async () => {
     stripe = await loadStripe(PUBLIC_STRIPE_KEY)
@@ -34,9 +35,11 @@
     return clientSecret
   }
 
-  async function submit() {
+  async function submit(event: SubmitEvent) {
+    event.preventDefault()
+
     // avoid processing duplicates
-    if (processing) return
+    if (processing || !stripe || !idealElement) return
 
     processing = true
 
@@ -60,7 +63,7 @@
 
     if (result.error) {
       // payment failed, notify user
-      error = result.error
+      error = result.error.message
       processing = false
     } else {
       // payment succeeded, redirect to "thank you" page
@@ -82,7 +85,7 @@
 {/if}
 
 <Elements {stripe}>
-  <form on:submit|preventDefault={submit}>
+  <form onsubmit={submit}>
     <input name="name" bind:value={name} placeholder="Name" disabled={processing} />
     <input
       name="email"

@@ -1,35 +1,38 @@
-<script>
-  import { onDestroy } from 'svelte'
-  import { register } from './util'
+<script lang="ts">
+  import type { Stripe, StripeEmbeddedCheckout as Checkout } from '@stripe/stripe-js'
+  import { register } from './util.js'
 
-  /** @type {import('@stripe/stripe-js').Stripe?} */
-  export let stripe
-
-  /** @type {string?} */
-  export let clientSecret
-
-  let wrapper
-
-  let checkoutElement
-
-  $: if (stripe) {
-    register(stripe)
+  interface Props {
+    stripe?: Stripe | null
+    clientSecret?: string
+    checkout?: Checkout
   }
 
-  $: if (stripe && clientSecret && wrapper) {
-    stripe
-      .initEmbeddedCheckout({ clientSecret })
-      .then((element) => {
-        checkoutElement = element
-        checkoutElement.mount(wrapper)
+  let { stripe, clientSecret, checkout = $bindable() }: Props = $props()
+
+  let wrapper = $state<HTMLElement>()
+
+  $effect(() => {
+    if (stripe) {
+      register(stripe)
+    }
+  })
+
+  $effect(() => {
+    if (stripe && clientSecret && wrapper) {
+      stripe.initEmbeddedCheckout({ clientSecret }).then((result) => {
+        checkout = result
+
+        if (wrapper) checkout.mount(wrapper)
       })
-  }
+    }
 
-  onDestroy(() => {
-    checkoutElement?.destroy()
-  });
+    return () => {
+      checkout?.destroy()
+    }
+  })
 </script>
 
 {#if stripe && clientSecret}
-  <div bind:this={wrapper}/>
+  <div bind:this={wrapper}></div>
 {/if}

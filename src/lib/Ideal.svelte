@@ -1,56 +1,75 @@
-<script>
-  import { onMount, getContext, createEventDispatcher } from 'svelte'
-  import { mount } from './util'
+<script lang="ts">
+  import type {
+    StripeElementClasses,
+    StripeElementStyle,
+    StripeIdealBankElement,
+    StripeIdealBankElementChangeEvent
+  } from '@stripe/stripe-js'
+  import { getContext } from 'svelte'
+  import type { ElementsContext } from './d.ts'
 
-  /** @type {import('@stripe/stripe-js').StripeElementClasses} */
-  export let classes = {}
+  interface Props {
+    classes?: StripeElementClasses
+    style?: StripeElementStyle
+    value?: string
+    disabled?: boolean
+    hideIcon?: boolean
+    element?: StripeIdealBankElement
+    onchange?: (event: StripeIdealBankElementChangeEvent) => any
+    onready?: (event: { elementType: 'idealBank' }) => any
+    onfocus?: (event: { elementType: 'idealBank' }) => any
+    onblur?: (event: { elementType: 'idealBank' }) => any
+    onescape?: (event: { elementType: 'idealBank' }) => any
+  }
 
-  /** @type {import('@stripe/stripe-js').StripeElementStyle} */
-  export let style = {}
+  let {
+    classes = {},
+    style = {},
+    value = '',
+    disabled = false,
+    hideIcon = true,
+    element = $bindable(),
+    onchange = () => {},
+    onready = () => {},
+    onfocus = () => {},
+    onblur = () => {},
+    onescape = () => {}
+  }: Props = $props()
 
-  /** @type {string?} */
-  export let value = ''
+  let wrapper = $state<HTMLElement>()
 
-  /** @type {boolean?} */
-  export let disabled = false
+  const { elements }: ElementsContext = getContext('stripe')
 
-  /** @type {boolean?} */
-  export let hideIcon = true
+  $effect(() => {
+    if (!wrapper) return
 
-  /** @type {import('@stripe/stripe-js').StripeElementBase?} */
-  export let element = null
-
-  /** @type {HTMLElement?} */
-  let wrapper
-
-  const dispatch = createEventDispatcher()
-
-  /** @type {import("./types").ElementsContext} */
-  const { elements } = getContext('stripe')
-
-  onMount(() => {
     const options = { classes, style, value, disabled, hideIcon }
 
-    element = mount(wrapper, 'idealBank', elements, dispatch, options)
+    element = elements.create('idealBank', options)
+    element.on('change', onchange)
+    element.on('ready', onready)
+    element.on('focus', onfocus)
+    element.on('blur', onblur)
+    element.on('escape', onescape)
 
-    return () => element.destroy()
+    return () => element?.destroy()
   })
 
   export function blur() {
-    element.blur()
+    element?.blur()
   }
 
   export function clear() {
-    element.clear()
+    element?.clear()
   }
 
   export function destroy() {
-    element.destroy()
+    element?.destroy()
   }
 
   export function focus() {
-    element.focus()
+    element?.focus()
   }
 </script>
 
-<div bind:this={wrapper} />
+<div bind:this={wrapper}></div>

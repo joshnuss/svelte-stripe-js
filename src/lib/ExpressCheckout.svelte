@@ -1,73 +1,104 @@
-<script>
-  import { mount } from './util'
-  import { onMount, getContext, createEventDispatcher } from 'svelte'
+<script lang="ts">
+  import type {
+    StripeExpressCheckoutElement as Element,
+    StripeExpressCheckoutElementOptions as Options,
+    StripeExpressCheckoutElementReadyEvent as ReadyEvent,
+    StripeExpressCheckoutElementClickEvent as ClickEvent,
+    StripeExpressCheckoutElementConfirmEvent as ConfirmEvent,
+    StripeExpressCheckoutElementShippingAddressChangeEvent as AddressChangeEvent,
+    StripeExpressCheckoutElementShippingRateChangeEvent as RateChangeEvent,
+    StripeError
+  } from '@stripe/stripe-js'
+  import { getContext } from 'svelte'
+  import type { ElementsContext } from './d.ts'
 
-  /** @typedef { import('@stripe/stripe-js').StripeExpressCheckoutElementOptions } Options */
+  interface Props {
+    buttonHeight?: Options['buttonHeight']
+    buttonTheme?: Options['buttonTheme']
+    buttonType?: Options['buttonType']
+    layout?: Options['layout']
+    paymentMethodOrder?: Options['paymentMethodOrder']
+    paymentMethods?: Options['paymentMethods']
+    element?: Element
+    onready?: (event: ReadyEvent) => any
+    onclick?: (event: ClickEvent) => any
+    onfocus?: (event: { elementType: 'expressCheckout' }) => any
+    onblur?: (event: { elementType: 'expressCheckout' }) => any
+    onescape?: (event: { elementType: 'expressCheckout' }) => any
+    onloaderror?: (event: { elementType: 'expressCheckout'; error: StripeError }) => any
+    onconfirm?: (event: ConfirmEvent) => any
+    oncancel?: (event: { elementType: 'expressCheckout' }) => any
+    onshippingaddresschange?: (event: AddressChangeEvent) => any
+    onshippingratechange?: (event: RateChangeEvent) => any
+  }
 
-  /** @type {Options['buttonHeight']} */
-  export let buttonHeight = undefined
+  let {
+    buttonHeight = undefined,
+    buttonTheme = undefined,
+    buttonType = undefined,
+    layout = undefined,
+    paymentMethodOrder = undefined,
+    paymentMethods = undefined,
+    element = $bindable(),
+    onready = () => {},
+    onclick = () => {},
+    onfocus = () => {},
+    onblur = () => {},
+    onescape = () => {},
+    onloaderror = () => {},
+    onconfirm = () => {},
+    oncancel = () => {},
+    onshippingaddresschange = () => {},
+    onshippingratechange = () => {}
+  }: Props = $props()
 
-  /** @type {Options['buttonTheme']} */
-  export let buttonTheme = undefined
+  let wrapper = $state<HTMLElement>()
 
-  /** @type {Options['buttonType']} */
-  export let buttonType = undefined
+  const { elements }: ElementsContext = getContext('stripe')
 
-  /** @type {Options['layout']} */
-  export let layout = undefined
+  $effect(() => {
+    if (!wrapper) return
 
-  /** @type {Options['paymentMethodOrder']} */
-  export let paymentMethodOrder = undefined
-
-  /** @type {Options['wallets']} */
-  export let wallets = undefined
-
-  /** @type {import('@stripe/stripe-js').StripeElementBase?} */
-  export let element = null
-
-  /** @type {HTMLElement?} */
-  let wrapper
-
-  const dispatch = createEventDispatcher()
-
-  /** @type {import("./types").ElementsContext} */
-  const { elements } = getContext('stripe')
-
-  onMount(() => {
     const options = {
       buttonHeight,
       buttonTheme,
       buttonType,
       layout,
       paymentMethodOrder,
-      wallets
+      paymentMethods
     }
 
-    element = mount(wrapper, 'expressCheckout', elements, dispatch, options)
-    element.on('click', (e) => dispatch('click', e))
-    element.on('cancel', (e) => dispatch('cancel', e))
-    element.on('confirm', (e) => dispatch('confirm', e))
-    element.on('shippingaddresschange', (e) => dispatch('shippingaddresschange', e))
-    element.on('shippingratechange', (e) => dispatch('shippingratechange', e))
+    element = elements.create('expressCheckout', options)
 
-    return () => element.destroy()
+    element.on('ready', onready)
+    element.on('click', onclick)
+    element.on('focus', onfocus)
+    element.on('blur', onblur)
+    element.on('escape', onescape)
+    element.on('loaderror', onloaderror)
+    element.on('confirm', onconfirm)
+    element.on('cancel', oncancel)
+    element.on('shippingaddresschange', onshippingaddresschange)
+    element.on('shippingratechange', onshippingratechange)
+
+    return () => element?.destroy()
   })
 
   export function blur() {
-    element.blur()
+    element?.blur()
   }
 
   export function clear() {
-    element.clear()
+    element?.clear()
   }
 
   export function destroy() {
-    element.destroy()
+    element?.destroy()
   }
 
   export function focus() {
-    element.focus()
+    element?.focus()
   }
 </script>
 
-<div bind:this={wrapper} />
+<div bind:this={wrapper}></div>
